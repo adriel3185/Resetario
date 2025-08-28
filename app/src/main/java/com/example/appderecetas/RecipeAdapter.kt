@@ -51,3 +51,17 @@ class RecipeAdapter(
                     onFavoriteClick(recipe)
                 }
             }
+        }
+    }
+}
+
+// Clase para manejar diferencias entre elementos (necesaria para ListAdapter)
+class RecipeDiffCallback : DiffUtil.ItemCallback<Recipe>() {
+    override fun areItemsTheSame(oldItem: Recipe, newItem: Recipe): Boolean {
+        return oldItem.id == newItem.id  // Usa tu campo identificador único
+    }
+
+    override fun areContentsTheSame(oldItem: Recipe, newItem: Recipe): Boolean {
+        return oldItem == newItem
+    }
+}
