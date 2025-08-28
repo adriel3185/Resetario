@@ -60,26 +60,32 @@ class RecipeDetailActivity : AppCompatActivity() {
 
     private fun loadRecipeDetails(recipeId: String) {
         lifecycleScope.launch {
-            repository.getRecipeById(recipeId).fold(
-                onSuccess = { recipe ->
-                    if (recipe != null) {
-                        currentRecipe = recipe
-                        displayRecipe(recipe)
-                    } else {
-                        Toast.makeText(this@RecipeDetailActivity, "Receta no encontrada", Toast.LENGTH_SHORT).show()
+            try {
+                repository.getRecipeById(recipeId).fold(
+                    onSuccess = { recipe ->
+                        if (recipe != null) {
+                            currentRecipe = recipe
+                            displayRecipe(recipe)
+                        } else {
+                            Toast.makeText(this@RecipeDetailActivity, "Receta no encontrada", Toast.LENGTH_SHORT).show()
+                            finish()
+                        }
+                    },
+                    onFailure = { exception ->
+                        Toast.makeText(this@RecipeDetailActivity, "Error al cargar: ${exception.message}", Toast.LENGTH_LONG).show()
                         finish()
                     }
-                },
-                onFailure = { e ->
-                    Toast.makeText(this@RecipeDetailActivity, "Error al cargar: ${e.message}", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            )
+                )
+            } catch (e: Exception) {
+                Toast.makeText(this@RecipeDetailActivity, "Error inesperado: ${e.message}", Toast.LENGTH_LONG).show()
+                finish()
+            }
         }
     }
 
     private fun displayRecipe(recipe: Recipe) {
         binding.apply {
+            // Información básica
             tvRecipeName.text = recipe.name
             tvDescription.text = recipe.description
             tvDifficulty.text = recipe.difficulty.displayName
@@ -109,45 +115,86 @@ class RecipeDetailActivity : AppCompatActivity() {
                 R.drawable.ic_favorite_border
             }
             fabFavorite.setImageResource(favoriteIcon)
+
+            // Actualizar título de la toolbar
+            supportActionBar?.title = recipe.name
         }
     }
 
     private fun toggleFavorite(recipe: Recipe) {
-        val updatedRecipe = recipe.copy(isFavorite = !recipe.isFavorite)
         lifecycleScope.launch {
-            repository.updateRecipe(updatedRecipe).fold(
-                onSuccess = {
-                    currentRecipe = updatedRecipe
-                    displayRecipe(updatedRecipe)
-                    val msg = if (updatedRecipe.isFavorite) "Añadido a favoritos" else "Eliminado de favoritos"
-                    Toast.makeText(this@RecipeDetailActivity, msg, Toast.LENGTH_SHORT).show()
-                },
-                onFailure = { e ->
-                    Toast.makeText(this@RecipeDetailActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            )
+            try {
+                repository.toggleFavorite(recipe.id).fold(
+                    onSuccess = { isFavorite ->
+                        // Actualizar la receta local
+                        val updatedRecipe = recipe.copy(isFavorite = isFavorite)
+                        currentRecipe = updatedRecipe
+
+                        // Actualizar la UI
+                        val favoriteIcon = if (isFavorite) {
+                            R.drawable.ic_favorite
+                        } else {
+                            R.drawable.ic_favorite_border
+                        }
+                        binding.fabFavorite.setImageResource(favoriteIcon)
+
+                        val message = if (isFavorite) "Agregado a favoritos" else "Removido de favoritos"
+                        Toast.makeText(this@RecipeDetailActivity, message, Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = { exception ->
+                        Toast.makeText(
+                            this@RecipeDetailActivity,
+                            "Error: ${exception.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@RecipeDetailActivity,
+                    "Error inesperado: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
     private fun deleteRecipe(recipe: Recipe) {
         AlertDialog.Builder(this)
             .setTitle("Eliminar receta")
-            .setMessage("¿Seguro que deseas eliminar esta receta?")
+            .setMessage("¿Estás seguro de que quieres eliminar \"${recipe.name}\"?\n\nEsta acción no se puede deshacer.")
             .setPositiveButton("Eliminar") { _, _ ->
                 lifecycleScope.launch {
-                    repository.deleteRecipe(recipe.id).fold(
-                        onSuccess = {
-                            Toast.makeText(this@RecipeDetailActivity, "Receta eliminada", Toast.LENGTH_SHORT).show()
-                            setResult(RESULT_OK)
-                            finish()
-                        },
-                        onFailure = { e ->
-                            Toast.makeText(this@RecipeDetailActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-                    )
+                    try {
+                        repository.deleteRecipe(recipe.id).fold(
+                            onSuccess = {
+                                Toast.makeText(
+                                    this@RecipeDetailActivity,
+                                    "\"${recipe.name}\" eliminada correctamente",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                setResult(RESULT_OK)
+                                finish()
+                            },
+                            onFailure = { exception ->
+                                Toast.makeText(
+                                    this@RecipeDetailActivity,
+                                    "Error al eliminar: ${exception.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        )
+                    } catch (e: Exception) {
+                        Toast.makeText(
+                            this@RecipeDetailActivity,
+                            "Error inesperado: ${e.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 }
             }
             .setNegativeButton("Cancelar", null)
+            .setIcon(R.drawable.ic_delete)
             .show()
     }
 

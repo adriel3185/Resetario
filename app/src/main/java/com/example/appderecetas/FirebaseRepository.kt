@@ -1,6 +1,7 @@
 package com.example.appderecetas.repository
 
 import android.util.Log
+import com.example.appderecetas.model.Difficulty
 import com.example.appderecetas.model.Recipe
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -17,7 +18,19 @@ class FirebaseRepository {
 
     companion object {
         private const val TAG = "FirebaseRepository"
-        private const val FIRESTORE_TIMEOUT = 20000L // 20 segundos
+        private const val FIRESTORE_TIMEOUT = 10000L // 10 segundos
+    }
+
+    init {
+        // Configurar Firestore para mejor rendimiento
+        try {
+            val settings = com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                .setPersistenceEnabled(true)
+                .build()
+            db.firestoreSettings = settings
+        } catch (e: Exception) {
+            Log.w(TAG, "No se pudo configurar persistencia de Firestore", e)
+        }
     }
 
     private fun getCurrentUserId(): String? {
@@ -41,6 +54,36 @@ class FirebaseRepository {
         }
     }
 
+    // Método de test para verificar conectividad
+    suspend fun testConnection(): Result<Boolean> {
+        return try {
+            Log.d(TAG, "=== TESTING FIREBASE CONNECTION ===")
+            val userId = getCurrentUserId()
+            if (userId.isNullOrEmpty()) {
+                return Result.failure(IllegalStateException("Usuario no autenticado para test"))
+            }
+
+            val testData = mapOf(
+                "test" to "connection",
+                "timestamp" to System.currentTimeMillis(),
+                "userId" to userId
+            )
+
+            withFirestoreTimeout {
+                val docRef = db.collection("test").add(testData).await()
+                Log.d(TAG, "Test de conexión exitoso: ${docRef.id}")
+
+                // Eliminar el documento de test
+                docRef.delete().await()
+            }
+
+            Result.success(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Test de conexión falló", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun saveRecipe(recipe: Recipe): Result<String> {
         return try {
             Log.d(TAG, "=== INICIANDO GUARDADO DE RECETA ===")
@@ -56,9 +99,6 @@ class FirebaseRepository {
 
             Log.d(TAG, "Usuario autenticado: $userId")
 
-            // Verificar conectividad básica con Firestore
-            Log.d(TAG, "Verificando conectividad con Firestore...")
-
             val currentTime = System.currentTimeMillis()
             val recipeToSave = recipe.copy(
                 userId = userId,
@@ -67,7 +107,6 @@ class FirebaseRepository {
             )
 
             Log.d(TAG, "Receta preparada para guardado:")
-            Log.d(TAG, "- ID: ${recipeToSave.id}")
             Log.d(TAG, "- UserID: ${recipeToSave.userId}")
             Log.d(TAG, "- CreatedAt: ${recipeToSave.createdAt}")
             Log.d(TAG, "- UpdatedAt: ${recipeToSave.updatedAt}")
@@ -84,8 +123,11 @@ class FirebaseRepository {
                 val finalRecipe = recipeToSave.copy(id = documentRef.id)
                 Log.d(TAG, "ID final del documento: ${documentRef.id}")
 
-                Log.d(TAG, "Iniciando operación set() en Firestore...")
-                documentRef.set(finalRecipe).await()
+                // Usar toMap() para mejor compatibilidad con Firebase
+                val recipeMap = finalRecipe.toMap()
+                Log.d(TAG, "Mapa de datos preparado, iniciando set()...")
+
+                documentRef.set(recipeMap).await()
                 Log.d(TAG, "Operación set() completada exitosamente")
 
                 documentRef.id
@@ -104,12 +146,13 @@ class FirebaseRepository {
             val errorMessage = when {
                 e is TimeoutException -> "Tiempo de espera agotado. Verifica tu conexión a internet."
                 e.message?.contains("PERMISSION_DENIED", ignoreCase = true) == true ->
-                    "Sin permisos para guardar. Verifica las reglas de Firestore."
+                    "Sin permisos para guardar. Verifica las reglas de Firestore o contacta al administrador."
                 e.message?.contains("UNAVAILABLE", ignoreCase = true) == true ->
-                    "Servicio no disponible. Intenta más tarde."
-                e.message?.contains("network", ignoreCase = true) == true ->
-                    "Error de red. Verifica tu conexión a internet."
-                else -> e.message ?: "Error desconocido al guardar la receta"
+                    "Servicio no disponible temporalmente. Intenta más tarde."
+                e.message?.contains("network", ignoreCase = true) == true ||
+                        e.message?.contains("connectivity", ignoreCase = true) == true ->
+                    "Error de conexión. Verifica tu internet y vuelve a intentar."
+                else -> "Error al guardar: ${e.message ?: "Error desconocido"}"
             }
 
             Result.failure(Exception(errorMessage, e))
@@ -120,9 +163,29 @@ class FirebaseRepository {
         return try {
             Log.d(TAG, "Obteniendo receta por ID: $recipeId")
 
+            val userId = getCurrentUserId()
+            if (userId.isNullOrEmpty()) {
+                return Result.failure(IllegalStateException("Usuario no autenticado"))
+            }
+
             val recipe = withFirestoreTimeout {
                 val document = recipesCollection.document(recipeId).get().await()
-                document.toObject(Recipe::class.java)
+                if (document.exists()) {
+                    val data = document.data
+                    if (data != null) {
+                        val recipe = Recipe.fromMap(data)
+                        // Verificar que la receta pertenece al usuario actual
+                        if (recipe.userId == userId) {
+                            recipe
+                        } else {
+                            null // No tiene permisos
+                        }
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
             }
 
             Log.d(TAG, "Receta obtenida: ${recipe?.name ?: "null"}")
@@ -152,7 +215,12 @@ class FirebaseRepository {
 
                 querySnapshot.documents.mapNotNull { document ->
                     try {
-                        document.toObject(Recipe::class.java)
+                        val data = document.data
+                        if (data != null) {
+                            Recipe.fromMap(data)
+                        } else {
+                            null
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error al convertir documento a Recipe: ${document.id}", e)
                         null
@@ -187,7 +255,12 @@ class FirebaseRepository {
 
                 querySnapshot.documents.mapNotNull { document ->
                     try {
-                        document.toObject(Recipe::class.java)
+                        val data = document.data
+                        if (data != null) {
+                            Recipe.fromMap(data)
+                        } else {
+                            null
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error al convertir documento favorito a Recipe: ${document.id}", e)
                         null
@@ -214,20 +287,25 @@ class FirebaseRepository {
 
             val newFavoriteStatus = withFirestoreTimeout {
                 val document = recipesCollection.document(recipeId).get().await()
-                val recipe = document.toObject(Recipe::class.java)
+                val data = document.data
 
-                if (recipe != null && recipe.userId == userId) {
-                    val newStatus = !recipe.isFavorite
-                    recipesCollection.document(recipeId)
-                        .update(
-                            mapOf(
-                                "isFavorite" to newStatus,
-                                "updatedAt" to System.currentTimeMillis()
-                            )
-                        ).await()
-                    newStatus
+                if (data != null) {
+                    val recipe = Recipe.fromMap(data)
+                    if (recipe.userId == userId) {
+                        val newStatus = !recipe.isFavorite
+                        recipesCollection.document(recipeId)
+                            .update(
+                                mapOf(
+                                    "isFavorite" to newStatus,
+                                    "updatedAt" to System.currentTimeMillis()
+                                )
+                            ).await()
+                        newStatus
+                    } else {
+                        throw Exception("Sin permisos para modificar esta receta")
+                    }
                 } else {
-                    throw Exception("Receta no encontrada o sin permisos")
+                    throw Exception("Receta no encontrada")
                 }
             }
 
@@ -250,13 +328,18 @@ class FirebaseRepository {
 
             withFirestoreTimeout {
                 val document = recipesCollection.document(recipeId).get().await()
-                val recipe = document.toObject(Recipe::class.java)
+                val data = document.data
 
-                if (recipe != null && recipe.userId == userId) {
-                    recipesCollection.document(recipeId).delete().await()
-                    Log.d(TAG, "Receta eliminada exitosamente")
+                if (data != null) {
+                    val recipe = Recipe.fromMap(data)
+                    if (recipe.userId == userId) {
+                        recipesCollection.document(recipeId).delete().await()
+                        Log.d(TAG, "Receta eliminada exitosamente")
+                    } else {
+                        throw Exception("Sin permisos para eliminar esta receta")
+                    }
                 } else {
-                    throw Exception("Receta no encontrada o sin permisos")
+                    throw Exception("Receta no encontrada")
                 }
             }
 
@@ -277,17 +360,28 @@ class FirebaseRepository {
             Log.d(TAG, "Buscando recetas con query: $query")
 
             val recipes = withFirestoreTimeout {
+                // Obtener todas las recetas del usuario y filtrar localmente
+                // (Firestore tiene limitaciones con búsqueda de texto)
                 val querySnapshot = recipesCollection
                     .whereEqualTo("userId", userId)
-                    .orderBy("name")
-                    .startAt(query)
-                    .endAt(query + "\uf8ff")
                     .get()
                     .await()
 
                 querySnapshot.documents.mapNotNull { document ->
                     try {
-                        document.toObject(Recipe::class.java)
+                        val data = document.data
+                        if (data != null) {
+                            val recipe = Recipe.fromMap(data)
+                            // Filtrar por nombre que contenga el query (case insensitive)
+                            if (recipe.name.contains(query, ignoreCase = true) ||
+                                recipe.description.contains(query, ignoreCase = true)) {
+                                recipe
+                            } else {
+                                null
+                            }
+                        } else {
+                            null
+                        }
                     } catch (e: Exception) {
                         Log.e(TAG, "Error al convertir documento de búsqueda a Recipe: ${document.id}", e)
                         null
@@ -314,14 +408,19 @@ class FirebaseRepository {
 
             withFirestoreTimeout {
                 val document = recipesCollection.document(recipe.id).get().await()
-                val existingRecipe = document.toObject(Recipe::class.java)
+                val data = document.data
 
-                if (existingRecipe != null && existingRecipe.userId == userId) {
-                    val updatedRecipe = recipe.copy(updatedAt = System.currentTimeMillis())
-                    recipesCollection.document(recipe.id).set(updatedRecipe).await()
-                    Log.d(TAG, "Receta actualizada exitosamente")
+                if (data != null) {
+                    val existingRecipe = Recipe.fromMap(data)
+                    if (existingRecipe.userId == userId) {
+                        val updatedRecipe = recipe.copy(updatedAt = System.currentTimeMillis())
+                        recipesCollection.document(recipe.id).set(updatedRecipe.toMap()).await()
+                        Log.d(TAG, "Receta actualizada exitosamente")
+                    } else {
+                        throw Exception("Sin permisos para actualizar esta receta")
+                    }
                 } else {
-                    throw Exception("Receta no encontrada o sin permisos")
+                    throw Exception("Receta no encontrada")
                 }
             }
 
@@ -331,6 +430,4 @@ class FirebaseRepository {
             Result.failure(e)
         }
     }
-
-
 }
