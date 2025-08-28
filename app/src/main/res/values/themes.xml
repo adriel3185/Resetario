@@ -1,10 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
+
     <style name="Base.Theme.AppDeRecetas" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Colores principales -->
         <item name="colorPrimary">@color/primary_color</item>
-        <item name="colorPrimaryVariant">@color/primary_dark</item>
+        <item name="colorPrimaryContainer">@color/primary_dark</item>
         <item name="colorSecondary">@color/accent_color</item>
+        <item name="colorSecondaryContainer">@color/accent_color</item>
 
         <!-- Colores de superficie -->
         <item name="android:colorBackground">@color/background_color</item>
@@ -23,7 +24,7 @@
 
     <style name="Theme.AppDeRecetas" parent="Base.Theme.AppDeRecetas" />
 
-    <!-- Tema específico para Splash Screen -->
+    <!-- Splash Theme -->
     <style name="SplashTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:windowBackground">@color/primary_color</item>
         <item name="android:statusBarColor">@color/primary_color</item>
@@ -31,4 +32,5 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
     </style>
+
 </resources>

@@ -8,7 +8,7 @@ data class Recipe(
     val instructions: List<String> = emptyList(),
     val cookingTimeMinutes: Int = 0,
     val servings: Int = 1,
-    val difficulty: Difficulty = Difficulty.EASY,
+    val difficulty: Difficulty = Difficulty.FACIL,
     val imageUrl: String = "",
     val isFavorite: Boolean = false,
     val userId: String = "",
@@ -24,7 +24,7 @@ data class Recipe(
         instructions = emptyList(),
         cookingTimeMinutes = 0,
         servings = 1,
-        difficulty = Difficulty.EASY,
+        difficulty = Difficulty.FACIL,
         imageUrl = "",
         isFavorite = false,
         userId = "",
@@ -34,7 +34,7 @@ data class Recipe(
 }
 
 enum class Difficulty(val displayName: String) {
-    EASY("Fácil"),
-    MEDIUM("Medio"),
-    HARD("Difícil")
+    FACIL("Fácil"),
+    INTERMEDIO("Medio"),
+    DIFICIL("Difícil")
 }
