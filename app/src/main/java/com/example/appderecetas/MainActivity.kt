@@ -6,6 +6,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -64,7 +65,7 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         recipeAdapter = RecipeAdapter(
             onRecipeClick = { recipe ->
-                // ✅ Navegar a la pantalla de detalles
+                // Navegar a la pantalla de detalles
                 val intent = Intent(this, RecipeDetailActivity::class.java).apply {
                     putExtra(RecipeDetailActivity.EXTRA_RECIPE_ID, recipe.id)
                 }
@@ -72,6 +73,10 @@ class MainActivity : AppCompatActivity() {
             },
             onFavoriteClick = { recipe ->
                 toggleFavorite(recipe)
+            },
+            onDeleteClick = { recipe ->
+                // 🔥 NUEVA FUNCIÓN: Mostrar diálogo de confirmación para borrar
+                showDeleteConfirmationDialog(recipe)
             }
         )
 
@@ -91,7 +96,7 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == ADD_RECIPE_REQUEST_CODE && resultCode == RESULT_OK) {
-            // ✅ Recargar recetas cuando se agrega una nueva
+            // Recargar recetas cuando se agrega una nueva
             loadRecipes()
         }
     }
@@ -179,6 +184,56 @@ class MainActivity : AppCompatActivity() {
                     this@MainActivity,
                     "Error inesperado: ${e.message}",
                     Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    // 🔥 NUEVA FUNCIÓN: Mostrar diálogo de confirmación para borrar
+    private fun showDeleteConfirmationDialog(recipe: Recipe) {
+        AlertDialog.Builder(this)
+            .setTitle("Eliminar Receta")
+            .setMessage("¿Estás seguro de que quieres eliminar \"${recipe.name}\"?\n\nEsta acción no se puede deshacer.")
+            .setPositiveButton("Eliminar") { _, _ ->
+                deleteRecipe(recipe)
+            }
+            .setNegativeButton("Cancelar", null)
+            .setIcon(R.drawable.ic_delete)
+            .show()
+    }
+
+    // 🔥 NUEVA FUNCIÓN: Eliminar receta
+    private fun deleteRecipe(recipe: Recipe) {
+        lifecycleScope.launch {
+            try {
+                repository.deleteRecipe(recipe.id).fold(
+                    onSuccess = {
+                        // Remover la receta de la lista local
+                        val updatedRecipes = recipesList.filter { it.id != recipe.id }
+                        recipesList.clear()
+                        recipesList.addAll(updatedRecipes)
+                        recipeAdapter.submitList(updatedRecipes.toList())
+                        updateUI(updatedRecipes)
+
+                        Toast.makeText(
+                            this@MainActivity,
+                            "\"${recipe.name}\" eliminada correctamente",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    onFailure = { exception ->
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Error al eliminar: ${exception.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error inesperado: ${e.message}",
+                    Toast.LENGTH_LONG
                 ).show()
             }
         }

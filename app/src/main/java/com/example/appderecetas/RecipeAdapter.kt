@@ -11,7 +11,8 @@ import com.example.appderecetas.model.Recipe
 
 class RecipeAdapter(
     private val onRecipeClick: (Recipe) -> Unit,
-    private val onFavoriteClick: (Recipe) -> Unit
+    private val onFavoriteClick: (Recipe) -> Unit,
+    private val onDeleteClick: (Recipe) -> Unit
 ) : ListAdapter<Recipe, RecipeAdapter.RecipeViewHolder>(RecipeDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecipeViewHolder {
@@ -50,6 +51,11 @@ class RecipeAdapter(
                 ibFavorite.setOnClickListener {
                     onFavoriteClick(recipe)
                 }
+
+                // 🔥 NUEVO: Click listener para borrar
+                ibDelete.setOnClickListener {
+                    onDeleteClick(recipe)
+                }
             }
         }
     }
@@ -58,7 +64,7 @@ class RecipeAdapter(
 // Clase para manejar diferencias entre elementos (necesaria para ListAdapter)
 class RecipeDiffCallback : DiffUtil.ItemCallback<Recipe>() {
     override fun areItemsTheSame(oldItem: Recipe, newItem: Recipe): Boolean {
-        return oldItem.id == newItem.id  // Usa tu campo identificador único
+        return oldItem.id == newItem.id
     }
 
     override fun areContentsTheSame(oldItem: Recipe, newItem: Recipe): Boolean {

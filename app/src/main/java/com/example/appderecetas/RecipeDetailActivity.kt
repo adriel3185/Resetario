@@ -1,9 +1,11 @@
 package com.example.appderecetas
 
 import android.os.Bundle
+import android.view.Menu
 import android.view.MenuItem
 import android.widget.ArrayAdapter
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.appderecetas.databinding.ActivityRecipeDetailBinding
@@ -68,8 +70,8 @@ class RecipeDetailActivity : AppCompatActivity() {
                         finish()
                     }
                 },
-                onFailure = { exception ->
-                    Toast.makeText(this@RecipeDetailActivity, "Error: ${exception.message}", Toast.LENGTH_LONG).show()
+                onFailure = { e ->
+                    Toast.makeText(this@RecipeDetailActivity, "Error al cargar: ${e.message}", Toast.LENGTH_SHORT).show()
                     finish()
                 }
             )
@@ -79,15 +81,12 @@ class RecipeDetailActivity : AppCompatActivity() {
     private fun displayRecipe(recipe: Recipe) {
         binding.apply {
             tvRecipeName.text = recipe.name
-            tvRecipeDescription.text = recipe.description
-            tvCookingTime.text = recipe.cookingTimeMinutes.toString()
-            tvServings.text = recipe.servings.toString()
+            tvDescription.text = recipe.description
             tvDifficulty.text = recipe.difficulty.displayName
+            tvCookingTime.text = "${recipe.cookingTimeMinutes} min"
+            tvServings.text = "${recipe.servings} porciones"
 
-            // Configurar botón favorito
-            updateFavoriteButton(recipe.isFavorite)
-
-            // Configurar lista de ingredientes
+            // Lista de ingredientes
             val ingredientsAdapter = ArrayAdapter(
                 this@RecipeDetailActivity,
                 android.R.layout.simple_list_item_1,
@@ -95,7 +94,7 @@ class RecipeDetailActivity : AppCompatActivity() {
             )
             lvIngredients.adapter = ingredientsAdapter
 
-            // Configurar lista de instrucciones
+            // Lista de instrucciones
             val instructionsAdapter = ArrayAdapter(
                 this@RecipeDetailActivity,
                 android.R.layout.simple_list_item_1,
@@ -103,37 +102,68 @@ class RecipeDetailActivity : AppCompatActivity() {
             )
             lvInstructions.adapter = instructionsAdapter
 
-            // Actualizar título del toolbar
-            supportActionBar?.title = recipe.name
+            // Icono del botón de favorito
+            val favoriteIcon = if (recipe.isFavorite) {
+                R.drawable.ic_favorite
+            } else {
+                R.drawable.ic_favorite_border
+            }
+            fabFavorite.setImageResource(favoriteIcon)
         }
     }
 
     private fun toggleFavorite(recipe: Recipe) {
+        val updatedRecipe = recipe.copy(isFavorite = !recipe.isFavorite)
         lifecycleScope.launch {
-            repository.toggleFavorite(recipe.id).fold(
-                onSuccess = { isFavorite ->
-                    currentRecipe = recipe.copy(isFavorite = isFavorite)
-                    updateFavoriteButton(isFavorite)
-
-                    val message = if (isFavorite) "Agregado a favoritos" else "Removido de favoritos"
-                    Toast.makeText(this@RecipeDetailActivity, message, Toast.LENGTH_SHORT).show()
+            repository.updateRecipe(updatedRecipe).fold(
+                onSuccess = {
+                    currentRecipe = updatedRecipe
+                    displayRecipe(updatedRecipe)
+                    val msg = if (updatedRecipe.isFavorite) "Añadido a favoritos" else "Eliminado de favoritos"
+                    Toast.makeText(this@RecipeDetailActivity, msg, Toast.LENGTH_SHORT).show()
                 },
-                onFailure = { exception ->
-                    Toast.makeText(this@RecipeDetailActivity, "Error: ${exception.message}", Toast.LENGTH_SHORT).show()
+                onFailure = { e ->
+                    Toast.makeText(this@RecipeDetailActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             )
         }
     }
 
-    private fun updateFavoriteButton(isFavorite: Boolean) {
-        val icon = if (isFavorite) R.drawable.ic_favorite else R.drawable.ic_favorite_border
-        binding.fabFavorite.setImageResource(icon)
+    private fun deleteRecipe(recipe: Recipe) {
+        AlertDialog.Builder(this)
+            .setTitle("Eliminar receta")
+            .setMessage("¿Seguro que deseas eliminar esta receta?")
+            .setPositiveButton("Eliminar") { _, _ ->
+                lifecycleScope.launch {
+                    repository.deleteRecipe(recipe.id).fold(
+                        onSuccess = {
+                            Toast.makeText(this@RecipeDetailActivity, "Receta eliminada", Toast.LENGTH_SHORT).show()
+                            setResult(RESULT_OK)
+                            finish()
+                        },
+                        onFailure = { e ->
+                            Toast.makeText(this@RecipeDetailActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_recipe_detail, menu)
+        return true
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
                 finish()
+                true
+            }
+            R.id.action_delete -> {
+                currentRecipe?.let { deleteRecipe(it) }
                 true
             }
             else -> super.onOptionsItemSelected(item)

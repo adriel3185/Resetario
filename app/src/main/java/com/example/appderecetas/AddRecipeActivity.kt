@@ -11,6 +11,7 @@ import com.example.appderecetas.databinding.ActivityAddRecipeBinding
 import com.example.appderecetas.model.Difficulty
 import com.example.appderecetas.model.Recipe
 import com.example.appderecetas.repository.FirebaseRepository
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class AddRecipeActivity : AppCompatActivity() {
@@ -103,11 +104,10 @@ class AddRecipeActivity : AppCompatActivity() {
     }
 
     private fun saveRecipe() {
-        if (!validateForm()) {
-            return
-        }
+        if (!validateForm()) return
 
-        showProgressBar(true)
+        // Mostrar barra de progreso y mensaje inicial
+        showProgressBar(true, "Guardando receta...")
 
         val selectedDifficulty = binding.spinnerDifficulty.text.toString()
         val difficultyEnum = Difficulty.values()
@@ -124,31 +124,45 @@ class AddRecipeActivity : AppCompatActivity() {
             difficulty = difficultyEnum
         )
 
-        // ✅ Usar try-catch para manejar mejor los errores
         lifecycleScope.launch {
             try {
                 val result = repository.saveRecipe(recipe)
                 result.fold(
                     onSuccess = {
-                        showProgressBar(false)
-                        Toast.makeText(this@AddRecipeActivity, "¡Receta guardada exitosamente!", Toast.LENGTH_SHORT).show()
-                        // ✅ Usar runOnUiThread para asegurar que finish() se ejecute en el hilo principal
+                        // Cambiar mensaje mientras esperamos 2 segundos
                         runOnUiThread {
+                            showProgressBar(true, "¡Receta guardada! Regresando al menú...")
+                        }
+
+                        // Esperar 2 segundos
+                        delay(2000)
+
+                        // Regresar a MainActivity
+                        runOnUiThread {
+                            showProgressBar(false)
                             setResult(RESULT_OK)
                             finish()
                         }
                     },
                     onFailure = { exception ->
-                        showProgressBar(false)
                         runOnUiThread {
-                            Toast.makeText(this@AddRecipeActivity, "Error: ${exception.message}", Toast.LENGTH_LONG).show()
+                            showProgressBar(false)
+                            Toast.makeText(
+                                this@AddRecipeActivity,
+                                "Error al guardar: ${exception.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                 )
             } catch (e: Exception) {
-                showProgressBar(false)
                 runOnUiThread {
-                    Toast.makeText(this@AddRecipeActivity, "Error inesperado: ${e.message}", Toast.LENGTH_LONG).show()
+                    showProgressBar(false)
+                    Toast.makeText(
+                        this@AddRecipeActivity,
+                        "Error inesperado: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
         }
@@ -160,16 +174,12 @@ class AddRecipeActivity : AppCompatActivity() {
         if (binding.etRecipeName.text.toString().trim().isEmpty()) {
             binding.tilRecipeName.error = "El nombre es requerido"
             isValid = false
-        } else {
-            binding.tilRecipeName.error = null
-        }
+        } else binding.tilRecipeName.error = null
 
         if (binding.etDescription.text.toString().trim().isEmpty()) {
             binding.tilDescription.error = "La descripción es requerida"
             isValid = false
-        } else {
-            binding.tilDescription.error = null
-        }
+        } else binding.tilDescription.error = null
 
         if (ingredientsList.isEmpty()) {
             Toast.makeText(this, "Agrega al menos un ingrediente", Toast.LENGTH_SHORT).show()
@@ -185,33 +195,27 @@ class AddRecipeActivity : AppCompatActivity() {
         if (cookingTime.isEmpty() || cookingTime.toIntOrNull() == null || cookingTime.toInt() <= 0) {
             binding.tilCookingTime.error = "Ingresa un tiempo válido"
             isValid = false
-        } else {
-            binding.tilCookingTime.error = null
-        }
+        } else binding.tilCookingTime.error = null
 
         val servings = binding.etServings.text.toString()
         if (servings.isEmpty() || servings.toIntOrNull() == null || servings.toInt() <= 0) {
             binding.tilServings.error = "Ingresa un número válido"
             isValid = false
-        } else {
-            binding.tilServings.error = null
-        }
+        } else binding.tilServings.error = null
 
         if (binding.spinnerDifficulty.text.toString().isEmpty()) {
             binding.tilDifficulty.error = "Selecciona una dificultad"
             isValid = false
-        } else {
-            binding.tilDifficulty.error = null
-        }
+        } else binding.tilDifficulty.error = null
 
         return isValid
     }
 
-    private fun showProgressBar(show: Boolean) {
-        runOnUiThread {
-            binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
-            binding.btnSaveRecipe.isEnabled = !show
-        }
+    private fun showProgressBar(show: Boolean, message: String? = null) {
+        binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
+        binding.tvSavingMessage.visibility = if (show) View.VISIBLE else View.GONE
+        binding.tvSavingMessage.text = message ?: "Guardando..."
+        binding.btnSaveRecipe.isEnabled = !show
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

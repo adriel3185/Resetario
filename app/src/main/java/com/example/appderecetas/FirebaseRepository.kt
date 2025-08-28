@@ -302,4 +302,35 @@ class FirebaseRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun updateRecipe(recipe: Recipe): Result<Unit> {
+        return try {
+            val userId = getCurrentUserId()
+            if (userId.isNullOrEmpty()) {
+                return Result.failure(IllegalStateException("Usuario no autenticado"))
+            }
+
+            Log.d(TAG, "Actualizando receta: ${recipe.id}")
+
+            withFirestoreTimeout {
+                val document = recipesCollection.document(recipe.id).get().await()
+                val existingRecipe = document.toObject(Recipe::class.java)
+
+                if (existingRecipe != null && existingRecipe.userId == userId) {
+                    val updatedRecipe = recipe.copy(updatedAt = System.currentTimeMillis())
+                    recipesCollection.document(recipe.id).set(updatedRecipe).await()
+                    Log.d(TAG, "Receta actualizada exitosamente")
+                } else {
+                    throw Exception("Receta no encontrada o sin permisos")
+                }
+            }
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error al actualizar receta", e)
+            Result.failure(e)
+        }
+    }
+
+
 }

@@ -253,6 +253,21 @@
                 android:visibility="gone"
                 android:indeterminateTint="@color/primary_color" />
 
+
+
+            <TextView
+                android:id="@+id/tvSavingMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Guardando receta..."
+                android:textSize="16sp"
+                android:textColor="@android:color/black"
+                android:visibility="gone"
+                android:layout_below="@id/progressBar"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="8dp"/>
+
+
         </LinearLayout>
 
     </androidx.core.widget.NestedScrollView>
