@@ -1,3 +1,53 @@
 <resources>
     <string name="app_name">App de Recetas</string>
+
+    <!-- Splash Screen -->
+    <string name="app_logo">Logo de la aplicación</string>
+    <string name="splash_subtitle">Descubre sabores únicos</string>
+
+    <!-- Login -->
+    <string name="welcome_message">¡Bienvenido!</string>
+    <string name="login_subtitle">Inicia sesión para continuar</string>
+    <string name="email">Correo electrónico</string>
+    <string name="password">Contraseña</string>
+    <string name="login">Iniciar Sesión</string>
+    <string name="register">Crear Cuenta</string>
+    <string name="forgot_password">¿Olvidaste tu contraseña?</string>
+
+    <!-- Main Activity -->
+    <string name="main_subtitle">¿Qué vas a cocinar hoy?</string>
+    <string name="total_recipes">Total de recetas</string>
+    <string name="favorites">Favoritas</string>
+    <string name="recent_recipes">Recetas recientes</string>
+    <string name="no_recipes_yet">No tienes recetas aún</string>
+    <string name="add_first_recipe">¡Agrega tu primera receta para empezar!</string>
+    <string name="no_recipes">Sin recetas</string>
+    <string name="add_recipe">Agregar receta</string>
+
+    <!-- Menu -->
+    <string name="search">Buscar</string>
+    <string name="profile">Perfil</string>
+    <string name="logout">Cerrar Sesión</string>
+
+    <!-- Recipe -->
+    <string name="recipe_name">Nombre de la receta</string>
+    <string name="recipe_description">Descripción</string>
+    <string name="ingredients">Ingredientes</string>
+    <string name="instructions">Instrucciones</string>
+    <string name="cooking_time">Tiempo de cocción</string>
+    <string name="servings">Porciones</string>
+    <string name="difficulty">Dificultad</string>
+
+    <!-- Difficulty levels -->
+    <string name="difficulty_easy">Fácil</string>
+    <string name="difficulty_medium">Medio</string>
+    <string name="difficulty_hard">Difícil</string>
+
+    <!-- General -->
+    <string name="save">Guardar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="delete">Eliminar</string>
+    <string name="edit">Editar</string>
+    <string name="share">Compartir</string>
+    <string name="favorite">Favorito</string>
 </resources>

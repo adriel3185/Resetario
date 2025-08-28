@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "28663872687",
+    "project_id": "resetario-3",
+    "storage_bucket": "resetario-3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:28663872687:android:2277243cbfde893bdd285a",
+        "android_client_info": {
+          "package_name": "com.example.appderecetas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBhzpgMp9z4T5CYhRMFKQNe7HYFAOvVt8s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
