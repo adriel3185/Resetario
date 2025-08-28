@@ -5,9 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginHorizontal="8dp"
-    android:layout_marginVertical="4dp"
+    android:layout_marginVertical="6dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
+    app:cardElevation="3dp"
     android:foreground="?attr/selectableItemBackground">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -15,11 +15,11 @@
         android:layout_height="wrap_content"
         android:padding="16dp">
 
-        <!-- Imagen de la receta (placeholder por ahora) -->
+        <!-- Imagen placeholder de la receta -->
         <ImageView
             android:id="@+id/ivRecipeImage"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
             android:background="@color/primary_color"
             android:contentDescription="Imagen de la receta"
             android:scaleType="centerCrop"
@@ -32,17 +32,19 @@
             android:id="@+id/tvRecipeName"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
+            android:layout_marginStart="12dp"
             android:layout_marginEnd="8dp"
             android:textColor="@color/text_primary"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end"
             app:layout_constraintEnd_toStartOf="@+id/ibFavorite"
             app:layout_constraintStart_toEndOf="@+id/ivRecipeImage"
             app:layout_constraintTop_toTopOf="@+id/ivRecipeImage"
-            tools:text="Pasta Carbonara" />
+            tools:text="Pasta Carbonara Deliciosa" />
 
-        <!-- Descripción -->
+        <!-- Descripción corta -->
         <TextView
             android:id="@+id/tvRecipeDescription"
             android:layout_width="0dp"
@@ -56,71 +58,8 @@
             app:layout_constraintEnd_toStartOf="@+id/ibFavorite"
             app:layout_constraintStart_toStartOf="@+id/tvRecipeName"
             app:layout_constraintTop_toBottomOf="@+id/tvRecipeName"
-            tools:text="Deliciosa pasta con salsa cremosa y panceta crujiente" />
-
-        <!-- Información adicional -->
-        <LinearLayout
-            android:id="@+id/layoutInfo"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal"
-            app:layout_constraintEnd_toEndOf="@+id/tvRecipeDescription"
-            app:layout_constraintStart_toStartOf="@+id/tvRecipeName"
-            app:layout_constraintTop_toBottomOf="@+id/tvRecipeDescription">
-
-            <!-- Tiempo de cocción -->
-            <TextView
-                android:id="@+id/tvCookingTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/ic_launcher_background"
-                android:padding="4dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                tools:text="30 min" />
-
-            <!-- Separador -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
-                android:text="•"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <!-- Porciones -->
-            <TextView
-                android:id="@+id/tvServings"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/ic_launcher_background"
-                android:padding="4dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                tools:text="4 porciones" />
-
-            <!-- Separador -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="8dp"
-                android:text="•"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp" />
-
-            <!-- Dificultad -->
-            <TextView
-                android:id="@+id/tvDifficulty"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/ic_launcher_background"
-                android:padding="4dp"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                tools:text="Fácil" />
-
-        </LinearLayout>
+            app:layout_constraintBottom_toBottomOf="@+id/ivRecipeImage"
+            tools:text="Una deliciosa pasta italiana con salsa cremosa y panceta crujiente que te va a encantar" />
 
         <!-- Botón favorito -->
         <ImageButton
@@ -129,7 +68,7 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Marcar como favorito"
-            android:src="@drawable/ic_recipe_logo"
+            android:src="@drawable/ic_favorite_border"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 

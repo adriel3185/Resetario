@@ -43,7 +43,6 @@ class AddRecipeActivity : AppCompatActivity() {
         }
     }
 
-    // ✅ Ahora configuramos el AutoCompleteTextView en lugar de un Spinner
     private fun setupDifficultyDropdown() {
         val difficulties = Difficulty.values().map { it.displayName }
         val difficultyAdapter = ArrayAdapter(
@@ -104,37 +103,53 @@ class AddRecipeActivity : AppCompatActivity() {
     }
 
     private fun saveRecipe() {
-        if (validateForm()) {
-            showProgressBar(true)
+        if (!validateForm()) {
+            return
+        }
 
-            // ✅ Obtener dificultad desde el AutoCompleteTextView
-            val selectedDifficulty = binding.spinnerDifficulty.text.toString()
-            val difficultyEnum = Difficulty.values()
-                .firstOrNull { it.displayName == selectedDifficulty }
-                ?: Difficulty.FACIL
+        showProgressBar(true)
 
-            val recipe = Recipe(
-                name = binding.etRecipeName.text.toString().trim(),
-                description = binding.etDescription.text.toString().trim(),
-                ingredients = ingredientsList.toList(),
-                instructions = instructionsList.toList(),
-                cookingTimeMinutes = binding.etCookingTime.text.toString().toIntOrNull() ?: 0,
-                servings = binding.etServings.text.toString().toIntOrNull() ?: 1,
-                difficulty = difficultyEnum
-            )
+        val selectedDifficulty = binding.spinnerDifficulty.text.toString()
+        val difficultyEnum = Difficulty.values()
+            .firstOrNull { it.displayName == selectedDifficulty }
+            ?: Difficulty.FACIL
 
-            lifecycleScope.launch {
-                repository.saveRecipe(recipe).fold(
+        val recipe = Recipe(
+            name = binding.etRecipeName.text.toString().trim(),
+            description = binding.etDescription.text.toString().trim(),
+            ingredients = ingredientsList.toList(),
+            instructions = instructionsList.toList(),
+            cookingTimeMinutes = binding.etCookingTime.text.toString().toIntOrNull() ?: 0,
+            servings = binding.etServings.text.toString().toIntOrNull() ?: 1,
+            difficulty = difficultyEnum
+        )
+
+        // ✅ Usar try-catch para manejar mejor los errores
+        lifecycleScope.launch {
+            try {
+                val result = repository.saveRecipe(recipe)
+                result.fold(
                     onSuccess = {
                         showProgressBar(false)
                         Toast.makeText(this@AddRecipeActivity, "¡Receta guardada exitosamente!", Toast.LENGTH_SHORT).show()
-                        finish()
+                        // ✅ Usar runOnUiThread para asegurar que finish() se ejecute en el hilo principal
+                        runOnUiThread {
+                            setResult(RESULT_OK)
+                            finish()
+                        }
                     },
                     onFailure = { exception ->
                         showProgressBar(false)
-                        Toast.makeText(this@AddRecipeActivity, "Error: ${exception.message}", Toast.LENGTH_LONG).show()
+                        runOnUiThread {
+                            Toast.makeText(this@AddRecipeActivity, "Error: ${exception.message}", Toast.LENGTH_LONG).show()
+                        }
                     }
                 )
+            } catch (e: Exception) {
+                showProgressBar(false)
+                runOnUiThread {
+                    Toast.makeText(this@AddRecipeActivity, "Error inesperado: ${e.message}", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -193,8 +208,10 @@ class AddRecipeActivity : AppCompatActivity() {
     }
 
     private fun showProgressBar(show: Boolean) {
-        binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
-        binding.btnSaveRecipe.isEnabled = !show
+        runOnUiThread {
+            binding.progressBar.visibility = if (show) View.VISIBLE else View.GONE
+            binding.btnSaveRecipe.isEnabled = !show
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

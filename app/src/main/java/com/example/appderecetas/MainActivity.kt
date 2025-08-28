@@ -26,6 +26,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recipeAdapter: RecipeAdapter
     private val recipesList = mutableListOf<Recipe>()
 
+    companion object {
+        private const val ADD_RECIPE_REQUEST_CODE = 1001
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -60,8 +64,11 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() {
         recipeAdapter = RecipeAdapter(
             onRecipeClick = { recipe ->
-                // TODO: Implementar ver detalles de la receta
-                Toast.makeText(this, "Ver receta: ${recipe.name}", Toast.LENGTH_SHORT).show()
+                // ✅ Navegar a la pantalla de detalles
+                val intent = Intent(this, RecipeDetailActivity::class.java).apply {
+                    putExtra(RecipeDetailActivity.EXTRA_RECIPE_ID, recipe.id)
+                }
+                startActivity(intent)
             },
             onFavoriteClick = { recipe ->
                 toggleFavorite(recipe)
@@ -76,7 +83,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         binding.fabAddRecipe.setOnClickListener {
-            startActivity(Intent(this, AddRecipeActivity::class.java))
+            val intent = Intent(this, AddRecipeActivity::class.java)
+            startActivityForResult(intent, ADD_RECIPE_REQUEST_CODE)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == ADD_RECIPE_REQUEST_CODE && resultCode == RESULT_OK) {
+            // ✅ Recargar recetas cuando se agrega una nueva
+            loadRecipes()
         }
     }
 
@@ -90,22 +106,31 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadRecipes() {
         lifecycleScope.launch {
-            repository.getUserRecipes().fold(
-                onSuccess = { recipes ->
-                    recipesList.clear()
-                    recipesList.addAll(recipes)
-                    recipeAdapter.submitList(recipes.toList())
-                    updateUI(recipes)
-                },
-                onFailure = { exception ->
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Error al cargar recetas: ${exception.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    updateUI(emptyList())
-                }
-            )
+            try {
+                repository.getUserRecipes().fold(
+                    onSuccess = { recipes ->
+                        recipesList.clear()
+                        recipesList.addAll(recipes)
+                        recipeAdapter.submitList(recipes.toList())
+                        updateUI(recipes)
+                    },
+                    onFailure = { exception ->
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Error al cargar recetas: ${exception.message}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        updateUI(emptyList())
+                    }
+                )
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error inesperado: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+                updateUI(emptyList())
+            }
         }
     }
 
@@ -126,28 +151,36 @@ class MainActivity : AppCompatActivity() {
 
     private fun toggleFavorite(recipe: Recipe) {
         lifecycleScope.launch {
-            repository.toggleFavorite(recipe.id).fold(
-                onSuccess = { isFavorite ->
-                    // Actualizar la receta localmente
-                    val updatedRecipes = recipesList.map {
-                        if (it.id == recipe.id) it.copy(isFavorite = isFavorite) else it
-                    }
-                    recipesList.clear()
-                    recipesList.addAll(updatedRecipes)
-                    recipeAdapter.submitList(updatedRecipes.toList())
-                    updateUI(updatedRecipes)
+            try {
+                repository.toggleFavorite(recipe.id).fold(
+                    onSuccess = { isFavorite ->
+                        // Actualizar la receta localmente
+                        val updatedRecipes = recipesList.map {
+                            if (it.id == recipe.id) it.copy(isFavorite = isFavorite) else it
+                        }
+                        recipesList.clear()
+                        recipesList.addAll(updatedRecipes)
+                        recipeAdapter.submitList(updatedRecipes.toList())
+                        updateUI(updatedRecipes)
 
-                    val message = if (isFavorite) "Agregado a favoritos" else "Removido de favoritos"
-                    Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
-                },
-                onFailure = { exception ->
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Error: ${exception.message}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            )
+                        val message = if (isFavorite) "Agregado a favoritos" else "Removido de favoritos"
+                        Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+                    },
+                    onFailure = { exception ->
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Error: ${exception.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                )
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@MainActivity,
+                    "Error inesperado: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 

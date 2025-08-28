@@ -49,6 +49,17 @@
                 android:value=".MainActivity" />
         </activity>
 
+        <!-- Recipe Detail Activity -->
+        <activity
+            android:name=".RecipeDetailActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AppDeRecetas"
+            android:parentActivityName=".MainActivity">
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
     </application>
 
 </manifest>

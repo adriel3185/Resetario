@@ -2,7 +2,6 @@ package com.example.appderecetas.adapter
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -34,9 +33,6 @@ class RecipeAdapter(
             binding.apply {
                 tvRecipeName.text = recipe.name
                 tvRecipeDescription.text = recipe.description
-                tvCookingTime.text = "${recipe.cookingTimeMinutes} min"
-                tvServings.text = "${recipe.servings} porciones"
-                tvDifficulty.text = recipe.difficulty.displayName
 
                 // Configurar botón favorito
                 val favoriteIcon = if (recipe.isFavorite) {
@@ -55,16 +51,3 @@ class RecipeAdapter(
                     onFavoriteClick(recipe)
                 }
             }
-        }
-    }
-
-    class RecipeDiffCallback : DiffUtil.ItemCallback<Recipe>() {
-        override fun areItemsTheSame(oldItem: Recipe, newItem: Recipe): Boolean {
-            return oldItem.id == newItem.id
-        }
-
-        override fun areContentsTheSame(oldItem: Recipe, newItem: Recipe): Boolean {
-            return oldItem == newItem
-        }
-    }
-}
