@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permisos de Internet -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
@@ -13,9 +14,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppDeRecetas">
+        android:theme="@style/Theme.AppDeRecetas"
+        tools:targetApi="31">
 
-        <!-- Splash Activity como launcher -->
+        <!-- Splash Activity -->
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -30,35 +32,32 @@
         <activity
             android:name=".LoginActivity"
             android:exported="false"
-            android:theme="@style/Theme.AppDeRecetas" />
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Main Activity -->
         <activity
             android:name=".MainActivity"
-            android:exported="false"
-            android:theme="@style/Theme.AppDeRecetas" />
+            android:exported="false" />
 
         <!-- Add Recipe Activity -->
         <activity
             android:name=".AddRecipeActivity"
             android:exported="false"
-            android:theme="@style/Theme.AppDeRecetas"
-            android:parentActivityName=".MainActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
-        </activity>
+            android:parentActivityName=".MainActivity"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- Edit Recipe Activity -->
+        <activity
+            android:name=".EditRecipeActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- Recipe Detail Activity -->
         <activity
             android:name=".RecipeDetailActivity"
             android:exported="false"
-            android:theme="@style/Theme.AppDeRecetas"
-            android:parentActivityName=".MainActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
-        </activity>
+            android:parentActivityName=".MainActivity" />
 
     </application>
 

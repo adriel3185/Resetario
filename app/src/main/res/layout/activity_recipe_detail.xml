@@ -62,7 +62,7 @@
 
             <!-- Descripción -->
             <TextView
-                android:id="@+id/tvRecipeDescription"
+                android:id="@+id/tvDescription"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -99,7 +99,7 @@
                             android:textColor="@color/primary_color"
                             android:textSize="18sp"
                             android:textStyle="bold"
-                            tools:text="30" />
+                            tools:text="30 min" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -252,14 +252,5 @@
         android:contentDescription="Marcar como favorito"
         android:src="@drawable/ic_favorite_border"
         app:tint="@color/white" />
-
-    <TextView
-        android:id="@+id/tvDescription"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:textColor="@color/text_primary"
-        android:paddingTop="8dp"
-        android:text="Descripción de la receta" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

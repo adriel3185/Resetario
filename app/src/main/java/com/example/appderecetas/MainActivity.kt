@@ -27,11 +27,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var repository: FirebaseRepository
     private lateinit var recipeAdapter: RecipeAdapter
     private val recipesList = mutableListOf<Recipe>()
-    private var isLoading = false
 
     companion object {
-        private const val ADD_RECIPE_REQUEST_CODE = 1001
         private const val TAG = "MainActivity"
+        private const val ADD_RECIPE_REQUEST_CODE = 1001
+        private const val EDIT_RECIPE_REQUEST_CODE = 2001
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,16 +39,11 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        Log.d(TAG, "=== MainActivity onCreate ===")
+
         // Inicializar Firebase Auth y Repository
         auth = FirebaseAuth.getInstance()
         repository = FirebaseRepository()
-
-        // Verificar autenticación
-        if (auth.currentUser == null) {
-            Log.e(TAG, "Usuario no autenticado en MainActivity")
-            redirectToLogin()
-            return
-        }
 
         // Configurar toolbar
         setSupportActionBar(binding.toolbar)
@@ -64,41 +59,36 @@ class MainActivity : AppCompatActivity() {
         setupRecyclerView()
         setupClickListeners()
         loadUserData()
-
-        Log.d(TAG, "MainActivity inicializada correctamente")
     }
 
     override fun onResume() {
         super.onResume()
-        // Verificar autenticación al reanudar
-        if (auth.currentUser == null) {
-            redirectToLogin()
-            return
-        }
+        Log.d(TAG, "=== MainActivity onResume ===")
         // Recargar recetas cuando se regrese a la actividad
         loadRecipes()
     }
 
-    private fun redirectToLogin() {
-        val intent = Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
-    }
-
     private fun setupRecyclerView() {
+        Log.d(TAG, "Configurando RecyclerView")
+
         recipeAdapter = RecipeAdapter(
             onRecipeClick = { recipe ->
-                // Navegar a la pantalla de detalles
+                Log.d(TAG, "Click en receta: ${recipe.name}")
                 val intent = Intent(this, RecipeDetailActivity::class.java).apply {
                     putExtra(RecipeDetailActivity.EXTRA_RECIPE_ID, recipe.id)
                 }
                 startActivity(intent)
             },
             onFavoriteClick = { recipe ->
+                Log.d(TAG, "Click en favorito: ${recipe.name}")
                 toggleFavorite(recipe)
             },
+            onEditClick = { recipe ->
+                Log.d(TAG, "Click en editar: ${recipe.name}")
+                editRecipe(recipe)
+            },
             onDeleteClick = { recipe ->
+                Log.d(TAG, "Click en eliminar: ${recipe.name}")
                 showDeleteConfirmationDialog(recipe)
             }
         )
@@ -106,98 +96,92 @@ class MainActivity : AppCompatActivity() {
         binding.rvRecipes.apply {
             adapter = recipeAdapter
             layoutManager = LinearLayoutManager(this@MainActivity)
-            setHasFixedSize(true)
+            setHasFixedSize(false)
         }
+
+        Log.d(TAG, "RecyclerView configurado correctamente")
     }
 
     private fun setupClickListeners() {
         binding.fabAddRecipe.setOnClickListener {
-            if (auth.currentUser != null) {
-                val intent = Intent(this, AddRecipeActivity::class.java)
-                startActivityForResult(intent, ADD_RECIPE_REQUEST_CODE)
-            } else {
-                Toast.makeText(this, "Debes iniciar sesión para agregar recetas", Toast.LENGTH_SHORT).show()
-                redirectToLogin()
-            }
+            Log.d(TAG, "Click en FAB - Navegando a AddRecipeActivity")
+            val intent = Intent(this, AddRecipeActivity::class.java)
+            startActivityForResult(intent, ADD_RECIPE_REQUEST_CODE)
         }
-
-        // Agregar swipe to refresh si tienes SwipeRefreshLayout
-        // binding.swipeRefreshLayout?.setOnRefreshListener { loadRecipes() }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == ADD_RECIPE_REQUEST_CODE && resultCode == RESULT_OK) {
-            Log.d(TAG, "Receta agregada, recargando lista...")
-            loadRecipes()
+        Log.d(TAG, "=== onActivityResult ===")
+        Log.d(TAG, "RequestCode: $requestCode, ResultCode: $resultCode")
+
+        when (requestCode) {
+            ADD_RECIPE_REQUEST_CODE -> {
+                if (resultCode == RESULT_OK) {
+                    Log.d(TAG, "Receta agregada exitosamente - Recargando lista")
+                    loadRecipes()
+                }
+            }
+            EDIT_RECIPE_REQUEST_CODE -> {
+                if (resultCode == RESULT_OK) {
+                    Log.d(TAG, "Receta editada exitosamente - Recargando lista")
+                    loadRecipes()
+                }
+            }
         }
     }
 
     private fun loadUserData() {
         val currentUser = auth.currentUser
-        if (currentUser != null) {
-            val welcomeText = "¡Hola ${currentUser.email?.substringBefore("@") ?: "Usuario"}!"
-            binding.tvWelcome.text = welcomeText
-            Log.d(TAG, "Usuario cargado: ${currentUser.email}")
-        } else {
-            Log.e(TAG, "No hay usuario autenticado")
-            redirectToLogin()
-            return
-        }
+        val welcomeText = "¡Hola ${currentUser?.email?.substringBefore("@") ?: "Usuario"}!"
+        binding.tvWelcome.text = welcomeText
+        Log.d(TAG, "Usuario cargado: $welcomeText")
 
         loadRecipes()
     }
 
     private fun loadRecipes() {
-        if (isLoading) {
-            Log.d(TAG, "Ya se está cargando, evitando carga duplicada")
-            return
-        }
-
-        if (auth.currentUser == null) {
-            Log.e(TAG, "Usuario no autenticado al cargar recetas")
-            redirectToLogin()
-            return
-        }
-
-        isLoading = true
-        showLoading(true)
-
-        Log.d(TAG, "Cargando recetas del usuario: ${auth.currentUser?.uid}")
+        Log.d(TAG, "=== INICIANDO CARGA DE RECETAS ===")
 
         lifecycleScope.launch {
             try {
                 repository.getUserRecipes().fold(
                     onSuccess = { recipes ->
-                        Log.d(TAG, "✅ Recetas cargadas exitosamente: ${recipes.size}")
+                        Log.d(TAG, "Recetas obtenidas del repositorio: ${recipes.size}")
+
+                        // 🔥 ACTUALIZACIÓN MEJORADA
                         runOnUiThread {
+                            // Limpiar lista actual
                             recipesList.clear()
                             recipesList.addAll(recipes)
-                            recipeAdapter.submitList(recipes.toList())
-                            updateUI(recipes)
-                            showLoading(false)
+
+                            Log.d(TAG, "Lista local actualizada con ${recipesList.size} recetas")
+
+                            // 🔥 MÉTODO MEJORADO PARA FORZAR ACTUALIZACIÓN
+                            recipeAdapter.submitList(emptyList()) {
+                                // Callback que se ejecuta cuando la lista vacía se ha aplicado
+                                recipeAdapter.submitList(recipes.toMutableList()) {
+                                    // Callback que se ejecuta cuando la nueva lista se ha aplicado
+                                    Log.d(TAG, "RecyclerView actualizado correctamente")
+                                    updateUI(recipes)
+                                }
+                            }
                         }
                     },
                     onFailure = { exception ->
-                        Log.e(TAG, "❌ Error al cargar recetas", exception)
+                        Log.e(TAG, "Error al cargar recetas", exception)
                         runOnUiThread {
-                            val errorMessage = when {
-                                exception.message?.contains("PERMISSION_DENIED") == true ->
-                                    "Error de permisos. Reinicia la aplicación."
-                                exception.message?.contains("network") == true ||
-                                        exception.message?.contains("connectivity") == true ->
-                                    "Sin conexión. Verifica tu internet."
-                                else -> "Error al cargar recetas: ${exception.message}"
-                            }
-
-                            Toast.makeText(this@MainActivity, errorMessage, Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Error al cargar recetas: ${exception.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                             updateUI(emptyList())
-                            showLoading(false)
                         }
                     }
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error inesperado al cargar recetas", e)
+                Log.e(TAG, "Error inesperado al cargar recetas", e)
                 runOnUiThread {
                     Toast.makeText(
                         this@MainActivity,
@@ -205,16 +189,17 @@ class MainActivity : AppCompatActivity() {
                         Toast.LENGTH_LONG
                     ).show()
                     updateUI(emptyList())
-                    showLoading(false)
                 }
-            } finally {
-                isLoading = false
             }
         }
     }
 
     private fun updateUI(recipes: List<Recipe>) {
         val hasRecipes = recipes.isNotEmpty()
+
+        Log.d(TAG, "=== ACTUALIZANDO UI ===")
+        Log.d(TAG, "Tiene recetas: $hasRecipes")
+        Log.d(TAG, "Total: ${recipes.size}")
 
         // Mostrar/ocultar estado vacío
         binding.layoutEmptyState.visibility = if (hasRecipes) View.GONE else View.VISIBLE
@@ -227,28 +212,25 @@ class MainActivity : AppCompatActivity() {
         binding.tvTotalRecipes.text = totalRecipes.toString()
         binding.tvFavorites.text = favoriteRecipes.toString()
 
-        Log.d(TAG, "UI actualizada: $totalRecipes recetas, $favoriteRecipes favoritas")
-    }
+        Log.d(TAG, "UI actualizada - Total: $totalRecipes, Favoritos: $favoriteRecipes")
 
-    private fun showLoading(show: Boolean) {
-        // Si tienes un ProgressBar o SwipeRefreshLayout, úsalo aquí
-        // binding.progressBar?.visibility = if (show) View.VISIBLE else View.GONE
-        // binding.swipeRefreshLayout?.isRefreshing = show
+        // 🔥 FORZAR REFRESH DEL RECYCLERVIEW
+        if (hasRecipes) {
+            binding.rvRecipes.post {
+                binding.rvRecipes.adapter?.notifyDataSetChanged()
+                Log.d(TAG, "NotifyDataSetChanged ejecutado")
+            }
+        }
     }
 
     private fun toggleFavorite(recipe: Recipe) {
-        if (auth.currentUser == null) {
-            redirectToLogin()
-            return
-        }
-
-        Log.d(TAG, "Cambiando favorito para: ${recipe.name}")
+        Log.d(TAG, "Cambiando estado de favorito para: ${recipe.name}")
 
         lifecycleScope.launch {
             try {
                 repository.toggleFavorite(recipe.id).fold(
                     onSuccess = { isFavorite ->
-                        Log.d(TAG, "✅ Favorito cambiado a: $isFavorite")
+                        Log.d(TAG, "Estado de favorito actualizado: $isFavorite")
 
                         runOnUiThread {
                             // Actualizar la receta localmente
@@ -257,15 +239,20 @@ class MainActivity : AppCompatActivity() {
                             }
                             recipesList.clear()
                             recipesList.addAll(updatedRecipes)
-                            recipeAdapter.submitList(updatedRecipes.toList())
-                            updateUI(updatedRecipes)
+
+                            // Actualizar adapter
+                            recipeAdapter.submitList(emptyList()) {
+                                recipeAdapter.submitList(updatedRecipes.toMutableList()) {
+                                    updateUI(updatedRecipes)
+                                }
+                            }
 
                             val message = if (isFavorite) "Agregado a favoritos" else "Removido de favoritos"
                             Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
                         }
                     },
                     onFailure = { exception ->
-                        Log.e(TAG, "❌ Error al cambiar favorito", exception)
+                        Log.e(TAG, "Error al cambiar favorito", exception)
                         runOnUiThread {
                             Toast.makeText(
                                 this@MainActivity,
@@ -276,7 +263,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error inesperado al cambiar favorito", e)
+                Log.e(TAG, "Error inesperado al cambiar favorito", e)
                 runOnUiThread {
                     Toast.makeText(
                         this@MainActivity,
@@ -288,39 +275,54 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 🔥 NUEVA FUNCIÓN: Editar receta
+    private fun editRecipe(recipe: Recipe) {
+        Log.d(TAG, "Iniciando edición de receta: ${recipe.name}")
+
+        val intent = Intent(this, EditRecipeActivity::class.java).apply {
+            putExtra(EditRecipeActivity.EXTRA_RECIPE_ID, recipe.id)
+        }
+        startActivityForResult(intent, EDIT_RECIPE_REQUEST_CODE)
+    }
+
     private fun showDeleteConfirmationDialog(recipe: Recipe) {
+        Log.d(TAG, "Mostrando diálogo de confirmación para eliminar: ${recipe.name}")
+
         AlertDialog.Builder(this)
             .setTitle("Eliminar Receta")
             .setMessage("¿Estás seguro de que quieres eliminar \"${recipe.name}\"?\n\nEsta acción no se puede deshacer.")
             .setPositiveButton("Eliminar") { _, _ ->
                 deleteRecipe(recipe)
             }
-            .setNegativeButton("Cancelar", null)
+            .setNegativeButton("Cancelar") { dialog, _ ->
+                Log.d(TAG, "Eliminación cancelada")
+                dialog.dismiss()
+            }
             .setIcon(R.drawable.ic_delete)
             .show()
     }
 
     private fun deleteRecipe(recipe: Recipe) {
-        if (auth.currentUser == null) {
-            redirectToLogin()
-            return
-        }
-
         Log.d(TAG, "Eliminando receta: ${recipe.name}")
 
         lifecycleScope.launch {
             try {
                 repository.deleteRecipe(recipe.id).fold(
                     onSuccess = {
-                        Log.d(TAG, "✅ Receta eliminada exitosamente")
+                        Log.d(TAG, "Receta eliminada exitosamente: ${recipe.name}")
 
                         runOnUiThread {
                             // Remover la receta de la lista local
                             val updatedRecipes = recipesList.filter { it.id != recipe.id }
                             recipesList.clear()
                             recipesList.addAll(updatedRecipes)
-                            recipeAdapter.submitList(updatedRecipes.toList())
-                            updateUI(updatedRecipes)
+
+                            // Actualizar adapter
+                            recipeAdapter.submitList(emptyList()) {
+                                recipeAdapter.submitList(updatedRecipes.toMutableList()) {
+                                    updateUI(updatedRecipes)
+                                }
+                            }
 
                             Toast.makeText(
                                 this@MainActivity,
@@ -330,7 +332,7 @@ class MainActivity : AppCompatActivity() {
                         }
                     },
                     onFailure = { exception ->
-                        Log.e(TAG, "❌ Error al eliminar receta", exception)
+                        Log.e(TAG, "Error al eliminar receta", exception)
                         runOnUiThread {
                             Toast.makeText(
                                 this@MainActivity,
@@ -341,7 +343,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 )
             } catch (e: Exception) {
-                Log.e(TAG, "❌ Error inesperado al eliminar", e)
+                Log.e(TAG, "Error inesperado al eliminar receta", e)
                 runOnUiThread {
                     Toast.makeText(
                         this@MainActivity,
@@ -361,63 +363,27 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_search -> {
-                // TODO: Implementar búsqueda
                 Toast.makeText(this, "Búsqueda próximamente", Toast.LENGTH_SHORT).show()
                 true
             }
             R.id.action_profile -> {
-                showUserProfile()
+                Toast.makeText(this, "Perfil próximamente", Toast.LENGTH_SHORT).show()
                 true
             }
             R.id.action_logout -> {
-                showLogoutConfirmation()
+                logout()
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    private fun showUserProfile() {
-        val user = auth.currentUser
-        if (user != null) {
-            val message = """
-                Usuario: ${user.email}
-                UID: ${user.uid}
-                Total de recetas: ${recipesList.size}
-                Favoritas: ${recipesList.count { it.isFavorite }}
-            """.trimIndent()
-
-            AlertDialog.Builder(this)
-                .setTitle("Perfil de Usuario")
-                .setMessage(message)
-                .setPositiveButton("OK", null)
-                .show()
-        }
-    }
-
-    private fun showLogoutConfirmation() {
-        AlertDialog.Builder(this)
-            .setTitle("Cerrar Sesión")
-            .setMessage("¿Estás seguro de que quieres cerrar sesión?")
-            .setPositiveButton("Cerrar Sesión") { _, _ ->
-                logout()
-            }
-            .setNegativeButton("Cancelar", null)
-            .show()
-    }
-
     private fun logout() {
-        Log.d(TAG, "Cerrando sesión del usuario: ${auth.currentUser?.email}")
+        Log.d(TAG, "Cerrando sesión")
         auth.signOut()
-
         val intent = Intent(this, LoginActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        Log.d(TAG, "MainActivity destruida")
     }
 }

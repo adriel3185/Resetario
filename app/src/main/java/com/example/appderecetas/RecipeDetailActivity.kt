@@ -1,5 +1,6 @@
 package com.example.appderecetas
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -21,6 +22,7 @@ class RecipeDetailActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_RECIPE_ID = "extra_recipe_id"
+        private const val EDIT_RECIPE_REQUEST_CODE = 2001
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +44,14 @@ class RecipeDetailActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Recargar los detalles cuando regresemos de editar
+        currentRecipe?.let {
+            loadRecipeDetails(it.id)
+        }
+    }
+
     private fun setupToolbar() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.apply {
@@ -60,32 +70,26 @@ class RecipeDetailActivity : AppCompatActivity() {
 
     private fun loadRecipeDetails(recipeId: String) {
         lifecycleScope.launch {
-            try {
-                repository.getRecipeById(recipeId).fold(
-                    onSuccess = { recipe ->
-                        if (recipe != null) {
-                            currentRecipe = recipe
-                            displayRecipe(recipe)
-                        } else {
-                            Toast.makeText(this@RecipeDetailActivity, "Receta no encontrada", Toast.LENGTH_SHORT).show()
-                            finish()
-                        }
-                    },
-                    onFailure = { exception ->
-                        Toast.makeText(this@RecipeDetailActivity, "Error al cargar: ${exception.message}", Toast.LENGTH_LONG).show()
+            repository.getRecipeById(recipeId).fold(
+                onSuccess = { recipe ->
+                    if (recipe != null) {
+                        currentRecipe = recipe
+                        displayRecipe(recipe)
+                    } else {
+                        Toast.makeText(this@RecipeDetailActivity, "Receta no encontrada", Toast.LENGTH_SHORT).show()
                         finish()
                     }
-                )
-            } catch (e: Exception) {
-                Toast.makeText(this@RecipeDetailActivity, "Error inesperado: ${e.message}", Toast.LENGTH_LONG).show()
-                finish()
-            }
+                },
+                onFailure = { e ->
+                    Toast.makeText(this@RecipeDetailActivity, "Error al cargar: ${e.message}", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            )
         }
     }
 
     private fun displayRecipe(recipe: Recipe) {
         binding.apply {
-            // Información básica
             tvRecipeName.text = recipe.name
             tvDescription.text = recipe.description
             tvDifficulty.text = recipe.difficulty.displayName
@@ -115,87 +119,96 @@ class RecipeDetailActivity : AppCompatActivity() {
                 R.drawable.ic_favorite_border
             }
             fabFavorite.setImageResource(favoriteIcon)
-
-            // Actualizar título de la toolbar
-            supportActionBar?.title = recipe.name
         }
     }
 
     private fun toggleFavorite(recipe: Recipe) {
         lifecycleScope.launch {
-            try {
-                repository.toggleFavorite(recipe.id).fold(
-                    onSuccess = { isFavorite ->
-                        // Actualizar la receta local
-                        val updatedRecipe = recipe.copy(isFavorite = isFavorite)
-                        currentRecipe = updatedRecipe
+            repository.toggleFavorite(recipe.id).fold(
+                onSuccess = { isFavorite ->
+                    currentRecipe = recipe.copy(isFavorite = isFavorite)
+                    currentRecipe?.let { displayRecipe(it) }
 
-                        // Actualizar la UI
-                        val favoriteIcon = if (isFavorite) {
-                            R.drawable.ic_favorite
-                        } else {
-                            R.drawable.ic_favorite_border
-                        }
-                        binding.fabFavorite.setImageResource(favoriteIcon)
-
-                        val message = if (isFavorite) "Agregado a favoritos" else "Removido de favoritos"
-                        Toast.makeText(this@RecipeDetailActivity, message, Toast.LENGTH_SHORT).show()
-                    },
-                    onFailure = { exception ->
-                        Toast.makeText(
-                            this@RecipeDetailActivity,
-                            "Error: ${exception.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                )
-            } catch (e: Exception) {
-                Toast.makeText(
-                    this@RecipeDetailActivity,
-                    "Error inesperado: ${e.message}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
+                    val msg = if (isFavorite) "Añadido a favoritos" else "Eliminado de favoritos"
+                    Toast.makeText(this@RecipeDetailActivity, msg, Toast.LENGTH_SHORT).show()
+                },
+                onFailure = { e ->
+                    Toast.makeText(this@RecipeDetailActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            )
         }
+    }
+
+    private fun editRecipe(recipe: Recipe) {
+        val intent = Intent(this, EditRecipeActivity::class.java).apply {
+            putExtra(EditRecipeActivity.EXTRA_RECIPE_ID, recipe.id)
+        }
+        startActivityForResult(intent, EDIT_RECIPE_REQUEST_CODE)
+    }
+
+    private fun shareRecipe(recipe: Recipe) {
+        val shareText = buildString {
+            append("🍽️ ${recipe.name}\n\n")
+            append("📝 ${recipe.description}\n\n")
+            append("⏱️ Tiempo: ${recipe.cookingTimeMinutes} min\n")
+            append("👥 Porciones: ${recipe.servings}\n")
+            append("📊 Dificultad: ${recipe.difficulty.displayName}\n\n")
+
+            append("📋 INGREDIENTES:\n")
+            recipe.ingredients.forEachIndexed { index, ingredient ->
+                append("${index + 1}. $ingredient\n")
+            }
+
+            append("\n👩‍🍳 INSTRUCCIONES:\n")
+            recipe.instructions.forEach { instruction ->
+                append("$instruction\n")
+            }
+
+            append("\n¡Compartido desde App de Recetas! 📱")
+        }
+
+        val shareIntent = Intent().apply {
+            action = Intent.ACTION_SEND
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, shareText)
+            putExtra(Intent.EXTRA_SUBJECT, "Receta: ${recipe.name}")
+        }
+
+        startActivity(Intent.createChooser(shareIntent, "Compartir receta"))
     }
 
     private fun deleteRecipe(recipe: Recipe) {
         AlertDialog.Builder(this)
             .setTitle("Eliminar receta")
-            .setMessage("¿Estás seguro de que quieres eliminar \"${recipe.name}\"?\n\nEsta acción no se puede deshacer.")
+            .setMessage("¿Seguro que deseas eliminar \"${recipe.name}\"?\n\nEsta acción no se puede deshacer.")
             .setPositiveButton("Eliminar") { _, _ ->
                 lifecycleScope.launch {
-                    try {
-                        repository.deleteRecipe(recipe.id).fold(
-                            onSuccess = {
-                                Toast.makeText(
-                                    this@RecipeDetailActivity,
-                                    "\"${recipe.name}\" eliminada correctamente",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                setResult(RESULT_OK)
-                                finish()
-                            },
-                            onFailure = { exception ->
-                                Toast.makeText(
-                                    this@RecipeDetailActivity,
-                                    "Error al eliminar: ${exception.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        )
-                    } catch (e: Exception) {
-                        Toast.makeText(
-                            this@RecipeDetailActivity,
-                            "Error inesperado: ${e.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
+                    repository.deleteRecipe(recipe.id).fold(
+                        onSuccess = {
+                            Toast.makeText(this@RecipeDetailActivity, "\"${recipe.name}\" eliminada", Toast.LENGTH_SHORT).show()
+                            setResult(RESULT_OK)
+                            finish()
+                        },
+                        onFailure = { e ->
+                            Toast.makeText(this@RecipeDetailActivity, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
             }
             .setNegativeButton("Cancelar", null)
             .setIcon(R.drawable.ic_delete)
             .show()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == EDIT_RECIPE_REQUEST_CODE && resultCode == RESULT_OK) {
+            // Recargar la receta después de editarla
+            currentRecipe?.let {
+                loadRecipeDetails(it.id)
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -207,6 +220,14 @@ class RecipeDetailActivity : AppCompatActivity() {
         return when (item.itemId) {
             android.R.id.home -> {
                 finish()
+                true
+            }
+            R.id.action_edit -> {
+                currentRecipe?.let { editRecipe(it) }
+                true
+            }
+            R.id.action_share -> {
+                currentRecipe?.let { shareRecipe(it) }
                 true
             }
             R.id.action_delete -> {

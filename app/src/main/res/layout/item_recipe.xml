@@ -26,7 +26,7 @@
             android:textColor="@color/text_primary"
             android:textSize="18sp"
             android:textStyle="bold"
-            app:layout_constraintEnd_toStartOf="@+id/ibDelete"
+            app:layout_constraintEnd_toStartOf="@+id/ibEdit"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="Pasta Carbonara Deliciosa" />
@@ -42,16 +42,74 @@
             android:maxLines="2"
             android:textColor="@color/text_secondary"
             android:textSize="14sp"
-            app:layout_constraintEnd_toStartOf="@+id/ibDelete"
+            app:layout_constraintEnd_toStartOf="@+id/ibEdit"
             app:layout_constraintStart_toStartOf="@+id/tvRecipeName"
             app:layout_constraintTop_toBottomOf="@+id/tvRecipeName"
             tools:text="Una deliciosa pasta italiana con salsa cremosa y panceta crujiente que te va a encantar" />
+
+        <!-- Información adicional -->
+        <LinearLayout
+            android:id="@+id/layoutInfo"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toStartOf="@+id/ibEdit"
+            app:layout_constraintStart_toStartOf="@+id/tvRecipeDescription"
+            app:layout_constraintTop_toBottomOf="@+id/tvRecipeDescription">
+
+            <TextView
+                android:id="@+id/tvCookingTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edittext_background"
+                android:padding="4dp"
+                android:layout_marginEnd="8dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="30 min" />
+
+            <TextView
+                android:id="@+id/tvDifficulty"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edittext_background"
+                android:padding="4dp"
+                android:layout_marginEnd="8dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="Fácil" />
+
+            <TextView
+                android:id="@+id/tvServings"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/edittext_background"
+                android:padding="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                tools:text="4 porciones" />
+
+        </LinearLayout>
+
+        <!-- Botón editar -->
+        <ImageButton
+            android:id="@+id/ibEdit"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Editar receta"
+            android:src="@drawable/ic_edit"
+            app:layout_constraintEnd_toStartOf="@+id/ibDelete"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <!-- Botón borrar -->
         <ImageButton
             android:id="@+id/ibDelete"
             android:layout_width="40dp"
             android:layout_height="40dp"
+            android:layout_marginStart="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Eliminar receta"
             android:src="@drawable/ic_delete"
