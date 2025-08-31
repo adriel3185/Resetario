@@ -201,13 +201,13 @@
                 app:cardCornerRadius="8dp"
                 app:cardElevation="2dp">
 
-                <ListView
-                    android:id="@+id/lvIngredients"
+                <!-- 🔥 CONTENEDOR DINÁMICO PARA INGREDIENTES -->
+                <LinearLayout
+                    android:id="@+id/llIngredientsContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:divider="@color/divider_color"
-                    android:dividerHeight="1dp" />
+                    android:orientation="vertical"
+                    android:padding="16dp" />
 
             </androidx.cardview.widget.CardView>
 
@@ -224,17 +224,17 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="80dp"
                 app:cardCornerRadius="8dp"
                 app:cardElevation="2dp">
 
-                <ListView
-                    android:id="@+id/lvInstructions"
+                <!-- 🔥 CONTENEDOR DINÁMICO PARA INSTRUCCIONES -->
+                <LinearLayout
+                    android:id="@+id/llInstructionsContainer"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp"
-                    android:divider="@color/divider_color"
-                    android:dividerHeight="1dp" />
+                    android:orientation="vertical"
+                    android:padding="16dp" />
 
             </androidx.cardview.widget.CardView>
 

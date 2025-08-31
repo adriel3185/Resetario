@@ -1,9 +1,11 @@
 package com.example.appderecetas
 
 import android.os.Bundle
+import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.ListView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -26,6 +28,7 @@ class EditRecipeActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_RECIPE_ID = "extra_recipe_id"
+        private const val TAG = "EditRecipeActivity"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -76,6 +79,37 @@ class EditRecipeActivity : AppCompatActivity() {
         binding.lvInstructions.adapter = instructionsAdapter
     }
 
+    // 🔥 MÉTODO CLAVE PARA ARREGLAR LA ALTURA DE LISTVIEW (IGUAL QUE EN ADD)
+    private fun setListViewHeight(listView: ListView) {
+        val adapter = listView.adapter ?: return
+        var totalHeight = 0
+
+        // Calcular la altura total de todos los elementos
+        for (i in 0 until adapter.count) {
+            val listItem = adapter.getView(i, null, listView)
+            listItem.measure(
+                View.MeasureSpec.makeMeasureSpec(listView.width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            totalHeight += listItem.measuredHeight
+        }
+
+        // Agregar la altura de los dividers
+        val dividerHeight = if (listView.dividerHeight > 0) listView.dividerHeight else 1
+        totalHeight += dividerHeight * (adapter.count - 1)
+
+        // Agregar padding
+        totalHeight += listView.paddingTop + listView.paddingBottom
+
+        // Aplicar la nueva altura
+        val params = listView.layoutParams
+        params.height = totalHeight
+        listView.layoutParams = params
+        listView.requestLayout()
+
+        Log.d(TAG, "ListView altura ajustada a: $totalHeight para ${adapter.count} elementos")
+    }
+
     private fun setupClickListeners() {
         binding.btnAddIngredient.setOnClickListener { addIngredient() }
         binding.btnAddInstruction.setOnClickListener { addInstruction() }
@@ -84,12 +118,22 @@ class EditRecipeActivity : AppCompatActivity() {
         binding.lvIngredients.setOnItemLongClickListener { _, _, position, _ ->
             ingredientsList.removeAt(position)
             ingredientsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvIngredients) // 🔥 AGREGAR AQUÍ
+            Toast.makeText(this, "Ingrediente eliminado", Toast.LENGTH_SHORT).show()
             true
         }
 
         binding.lvInstructions.setOnItemLongClickListener { _, _, position, _ ->
             instructionsList.removeAt(position)
+            // Renumerar las instrucciones
+            for (i in instructionsList.indices) {
+                val instruction = instructionsList[i]
+                val cleanInstruction = instruction.substringAfter(". ")
+                instructionsList[i] = "${i + 1}. $cleanInstruction"
+            }
             instructionsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvInstructions) // 🔥 AGREGAR AQUÍ
+            Toast.makeText(this, "Instrucción eliminada", Toast.LENGTH_SHORT).show()
             true
         }
     }
@@ -128,11 +172,15 @@ class EditRecipeActivity : AppCompatActivity() {
             ingredientsList.clear()
             ingredientsList.addAll(recipe.ingredients)
             ingredientsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvIngredients) // 🔥 CLAVE PARA MOSTRAR TODOS
 
             // Cargar instrucciones
             instructionsList.clear()
             instructionsList.addAll(recipe.instructions)
             instructionsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvInstructions) // 🔥 CLAVE PARA MOSTRAR TODOS
+
+            Log.d(TAG, "Receta cargada - Ingredientes: ${ingredientsList.size}, Instrucciones: ${instructionsList.size}")
         }
     }
 
@@ -141,7 +189,10 @@ class EditRecipeActivity : AppCompatActivity() {
         if (ingredient.isNotEmpty()) {
             ingredientsList.add(ingredient)
             ingredientsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvIngredients) // 🔥 LÍNEA CLAVE
             binding.etIngredient.setText("")
+            Toast.makeText(this, "Ingrediente agregado", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "Ingrediente agregado. Total: ${ingredientsList.size}")
         } else {
             Toast.makeText(this, "Ingresa un ingrediente", Toast.LENGTH_SHORT).show()
         }
@@ -153,7 +204,10 @@ class EditRecipeActivity : AppCompatActivity() {
             val stepNumber = instructionsList.size + 1
             instructionsList.add("$stepNumber. $instruction")
             instructionsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvInstructions) // 🔥 LÍNEA CLAVE
             binding.etInstruction.setText("")
+            Toast.makeText(this, "Instrucción agregada", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "Instrucción agregada. Total: ${instructionsList.size}")
         } else {
             Toast.makeText(this, "Ingresa una instrucción", Toast.LENGTH_SHORT).show()
         }
@@ -192,6 +246,11 @@ class EditRecipeActivity : AppCompatActivity() {
 
                         runOnUiThread {
                             showProgressBar(false)
+                            Toast.makeText(
+                                this@EditRecipeActivity,
+                                "¡Receta \"${updatedRecipe.name}\" actualizada!",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             setResult(RESULT_OK)
                             finish()
                         }
@@ -268,6 +327,17 @@ class EditRecipeActivity : AppCompatActivity() {
         binding.tvUpdatingMessage.visibility = if (show) View.VISIBLE else View.GONE
         binding.tvUpdatingMessage.text = message ?: "Actualizando..."
         binding.btnUpdateRecipe.isEnabled = !show
+
+        // Deshabilitar otros controles mientras se actualiza
+        binding.btnAddIngredient.isEnabled = !show
+        binding.btnAddInstruction.isEnabled = !show
+        binding.etRecipeName.isEnabled = !show
+        binding.etDescription.isEnabled = !show
+        binding.etIngredient.isEnabled = !show
+        binding.etInstruction.isEnabled = !show
+        binding.etCookingTime.isEnabled = !show
+        binding.etServings.isEnabled = !show
+        binding.spinnerDifficulty.isEnabled = !show
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

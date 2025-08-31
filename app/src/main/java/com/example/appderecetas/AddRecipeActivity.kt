@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.ListView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -94,6 +95,37 @@ class AddRecipeActivity : AppCompatActivity() {
         binding.lvInstructions.adapter = instructionsAdapter
     }
 
+    // 🔥 MÉTODO CLAVE PARA ARREGLAR LA ALTURA DE LISTVIEW
+    private fun setListViewHeight(listView: ListView) {
+        val adapter = listView.adapter ?: return
+        var totalHeight = 0
+
+        // Calcular la altura total de todos los elementos
+        for (i in 0 until adapter.count) {
+            val listItem = adapter.getView(i, null, listView)
+            listItem.measure(
+                View.MeasureSpec.makeMeasureSpec(listView.width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+            )
+            totalHeight += listItem.measuredHeight
+        }
+
+        // Agregar la altura de los dividers
+        val dividerHeight = if (listView.dividerHeight > 0) listView.dividerHeight else 1
+        totalHeight += dividerHeight * (adapter.count - 1)
+
+        // Agregar padding
+        totalHeight += listView.paddingTop + listView.paddingBottom
+
+        // Aplicar la nueva altura
+        val params = listView.layoutParams
+        params.height = totalHeight
+        listView.layoutParams = params
+        listView.requestLayout()
+
+        Log.d(TAG, "ListView altura ajustada a: $totalHeight para ${adapter.count} elementos")
+    }
+
     private fun setupClickListeners() {
         binding.btnAddIngredient.setOnClickListener { addIngredient() }
         binding.btnAddInstruction.setOnClickListener { addInstruction() }
@@ -102,6 +134,7 @@ class AddRecipeActivity : AppCompatActivity() {
         binding.lvIngredients.setOnItemLongClickListener { _, _, position, _ ->
             ingredientsList.removeAt(position)
             ingredientsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvIngredients) // 🔥 AGREGAR AQUÍ
             showTemporaryMessage("Ingrediente eliminado")
             true
         }
@@ -115,6 +148,7 @@ class AddRecipeActivity : AppCompatActivity() {
                 instructionsList[i] = "${i + 1}. $cleanInstruction"
             }
             instructionsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvInstructions) // 🔥 AGREGAR AQUÍ
             showTemporaryMessage("Instrucción eliminada")
             true
         }
@@ -125,8 +159,10 @@ class AddRecipeActivity : AppCompatActivity() {
         if (ingredient.isNotEmpty()) {
             ingredientsList.add(ingredient)
             ingredientsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvIngredients) // 🔥 LÍNEA CLAVE
             binding.etIngredient.setText("")
             showTemporaryMessage("Ingrediente agregado")
+            Log.d(TAG, "Ingrediente agregado. Total: ${ingredientsList.size}")
         } else {
             showTemporaryMessage("Ingresa un ingrediente válido")
         }
@@ -138,8 +174,10 @@ class AddRecipeActivity : AppCompatActivity() {
             val stepNumber = instructionsList.size + 1
             instructionsList.add("$stepNumber. $instruction")
             instructionsAdapter.notifyDataSetChanged()
+            setListViewHeight(binding.lvInstructions) // 🔥 LÍNEA CLAVE
             binding.etInstruction.setText("")
             showTemporaryMessage("Instrucción agregada")
+            Log.d(TAG, "Instrucción agregada. Total: ${instructionsList.size}")
         } else {
             showTemporaryMessage("Ingresa una instrucción válida")
         }

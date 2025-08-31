@@ -4,7 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -94,23 +98,11 @@ class RecipeDetailActivity : AppCompatActivity() {
             tvDescription.text = recipe.description
             tvDifficulty.text = recipe.difficulty.displayName
             tvCookingTime.text = "${recipe.cookingTimeMinutes} min"
-            tvServings.text = "${recipe.servings} porciones"
+            tvServings.text = "${recipe.servings}"
 
-            // Lista de ingredientes
-            val ingredientsAdapter = ArrayAdapter(
-                this@RecipeDetailActivity,
-                android.R.layout.simple_list_item_1,
-                recipe.ingredients
-            )
-            lvIngredients.adapter = ingredientsAdapter
-
-            // Lista de instrucciones
-            val instructionsAdapter = ArrayAdapter(
-                this@RecipeDetailActivity,
-                android.R.layout.simple_list_item_1,
-                recipe.instructions
-            )
-            lvInstructions.adapter = instructionsAdapter
+            // 🔥 SOLUCIÓN: Reemplazar ListView con LinearLayout dinámico
+            populateIngredientsList(recipe.ingredients)
+            populateInstructionsList(recipe.instructions)
 
             // Icono del botón de favorito
             val favoriteIcon = if (recipe.isFavorite) {
@@ -121,6 +113,46 @@ class RecipeDetailActivity : AppCompatActivity() {
             fabFavorite.setImageResource(favoriteIcon)
         }
     }
+
+    // 🔥 NUEVA FUNCIÓN: Poblar lista de ingredientes dinámicamente
+    private fun populateInstructionsList(instructions: List<String>) {
+        binding.llInstructionsContainer.removeAllViews()
+
+        instructions.forEachIndexed { index, instruction ->
+            val textView = TextView(this).apply {
+                text = "${index + 1}. $instruction"
+                textSize = 16f
+                setPadding(0, 12, 0, 12)
+                setTextColor(getColor(R.color.text_primary))
+                setLineSpacing(4f, 1.1f) // ✅ corrección aquí
+
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = 8
+                }
+            }
+            binding.llInstructionsContainer.addView(textView)
+
+            if (index < instructions.size - 1) {
+                val divider = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1
+                    ).apply {
+                        topMargin = 8
+                        bottomMargin = 8
+                    }
+                    setBackgroundColor(getColor(R.color.divider_color))
+                }
+                binding.llInstructionsContainer.addView(divider)
+            }
+        }
+    }
+
+    // 🔥 NUEVA FUNCIÓN: Poblar lista de instrucciones dinámicamente
+
 
     private fun toggleFavorite(recipe: Recipe) {
         lifecycleScope.launch {
@@ -138,7 +170,40 @@ class RecipeDetailActivity : AppCompatActivity() {
             )
         }
     }
+    private fun populateIngredientsList(ingredients: List<String>) {
+        binding.llIngredientsContainer.removeAllViews()
 
+        ingredients.forEachIndexed { index, ingredient ->
+            val textView = TextView(this).apply {
+                text = "• $ingredient"
+                textSize = 16f
+                setPadding(0, 12, 0, 12)
+                setTextColor(getColor(R.color.text_primary))
+
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = 8
+                }
+            }
+            binding.llIngredientsContainer.addView(textView)
+
+            if (index < ingredients.size - 1) {
+                val divider = View(this).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        1
+                    ).apply {
+                        topMargin = 8
+                        bottomMargin = 8
+                    }
+                    setBackgroundColor(getColor(R.color.divider_color))
+                }
+                binding.llIngredientsContainer.addView(divider)
+            }
+        }
+    }
     private fun editRecipe(recipe: Recipe) {
         val intent = Intent(this, EditRecipeActivity::class.java).apply {
             putExtra(EditRecipeActivity.EXTRA_RECIPE_ID, recipe.id)
